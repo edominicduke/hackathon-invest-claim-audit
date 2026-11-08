@@ -1,0 +1,5 @@
+Multiplexed Readout of Superconducting Qubits Using a 3D Re-entrant Cavity Filter
+
+Authors: Mustafa Bakr, Simone D. Fasciati, Shuxiang Cao, Giulio Campanaro, James Wills, Mohammed Alghadeer, Michele Piscitelli, Boris Shteynas, Vivek Chidambaram, Peter J. Leek
+
+Abstract: Hardware efficient methods for high fidelity quantum state measurements are crucial for superconducting qubit experiments, as qubit numbers grow and feedback and state reset begin to be employed for quantum error correction. We present a 3D re-entrant cavity filter designed for frequency-multiplexed readout of superconducting qubits. The cavity filter is situated out of the plane of the qubit circuit and capacitively couples to an array of on-chip readout resonators in a manner that can scale to large qubit arrays. The re-entrant cavity functions as a large-linewidth bandpass filter with intrinsic Purcell filtering. We demonstrate the concept with a four-qubit multiplexed device.

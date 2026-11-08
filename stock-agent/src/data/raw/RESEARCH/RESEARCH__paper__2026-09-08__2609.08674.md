@@ -1,0 +1,5 @@
+Wafer-Level 1/f Noise Characterization of Scaled P-Type Nanosheets and Comparison with Planar HKMG Transistors
+
+Authors: Ruben Asanovski, Anabela Veloso, Ben Kaczer, Naoto Horiguchi, Jacopo Franco
+
+Abstract: We present a comprehensive wafer-level 1/f noise study of scaled Gate-All-Around (GAA) p-type nanosheet transistors and benchmark them against large-area planar High- \k{appa} Metal Gate (HKMG) devices to assess the impact of device architecture on reliability. By statistically analyzing noise data from 188 nanosheets, we extract the effective trap density in the dielectric and compare it to that of planar transistors with identical gate stack, comparable processing thermal budgets, and no specific reliability anneals. The effective trap density extracted from 1/f noise is comparable in planar and nanosheet architectures. This indicates that transitioning to GAA nanosheets does not increase noise, which remains governed by gate stack quality.
