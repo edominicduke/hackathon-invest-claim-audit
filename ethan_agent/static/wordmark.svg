@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="176" height="32" viewBox="0 0 176 32" role="img" aria-label="Thesis Audit">
+  <rect x="1" y="3" width="26" height="26" rx="6" fill="#172033"/>
+  <path d="M7.5 17.2 L12.2 21.8 L20.8 10.6" fill="none" stroke="#FBFAF7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="36" y="23" font-family="Georgia, 'Times New Roman', serif" font-size="20" font-weight="700" letter-spacing="-0.3">
+    <tspan fill="#172033">Thesis</tspan><tspan fill="#0F5F66" dx="5">Audit</tspan>
+  </text>
+</svg>

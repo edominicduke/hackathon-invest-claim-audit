@@ -1,0 +1,39 @@
+[server]
+enableStaticServing = true     # serves ./static (bundled fonts) at /app/static/
+
+[theme]
+base = "light"                 # light-only for now
+primaryColor = "#0F5F66"
+backgroundColor = "#FBFAF7"
+secondaryBackgroundColor = "#F3F0E9"
+textColor = "#172033"
+linkColor = "#0F5F66"
+borderColor = "#E3DFD6"
+baseRadius = "8px"
+buttonRadius = "8px"
+font = "Inter"
+headingFont = "Newsreader"
+codeFont = "JetBrains Mono"
+codeBackgroundColor = "#F3F0E9"
+chartCategoricalColors = ["#0F5F66", "#946200", "#A12B2B", "#526070"]
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/fonts/Inter.woff2"
+weight = "100 900"
+style = "normal"
+
+[[theme.fontFaces]]
+family = "Newsreader"
+url = "app/static/fonts/Newsreader.woff2"
+weight = "200 800"
+style = "normal"
+
+[[theme.fontFaces]]
+family = "JetBrains Mono"
+url = "app/static/fonts/JetBrainsMono.woff2"
+weight = "100 800"
+style = "normal"
+
+[client]
+toolbarMode = "minimal"
