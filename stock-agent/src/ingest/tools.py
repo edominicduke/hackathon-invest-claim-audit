@@ -18,7 +18,7 @@ Or build your own chat loop with the pieces:
     run_tool(...)        executes a function call from Gemini and returns its response
     CITATION_RULES       append to your system prompt
 
-Tools the agent gets: search_documents, search_competitors, get_financials.
+Tools the agent gets: search_documents, search_competitors, get_financials, get_guidance_record.
 Financial rows get [S#] labels from the same registry as text results, so one
 answer can cite a reported number [S7] and the MD&A explanation [S3] together.
 
@@ -33,6 +33,7 @@ from __future__ import annotations
 from google.genai import types
 
 from .financials import METRICS, get_financials
+from .guidance import guidance_record
 from .search import DOC_TYPES, PEERS, describe_index, search, search_competitors
 from .verify import verify_citations
 
@@ -66,6 +67,12 @@ Every cited sentence is automatically checked against its sources; unsupported s
   Each row is one value for one period. Rows marked derived were calculated (full year minus nine
   months), so say "about" or note it. Compute changes (e.g. % growth) only from cited rows.
 - Combine numbers with text: cite the figure from get_financials and the explanation from search results.
+- To judge whether management delivers what it promises, call get_guidance_record. Report it in one or
+  two sentences, citing the record's summary id (and the guidance/actual ids for any specific quarter).
+  If it helps, add ONE small markdown table, at most 5 rows: | Quarter | Guided | Actual | Result |,
+  copying values exactly as given, with ids in the Guided and Actual cells. Never more than one table.
+  Beating guidance every quarter can just mean cautious guidance; misses are the stronger warning sign.
+  If no numeric guidance exists, say so in one sentence.
 - If the searches don't support a point, say the evidence is missing instead of guessing.
 """
 
@@ -164,6 +171,19 @@ def declarations() -> list[types.FunctionDeclaration]:
                 "required": ["ticker", "metrics"],
             },
         ),
+        types.FunctionDeclaration(
+            name="get_guidance_record",
+            description=(
+                "Did the company deliver the revenue it guided? For each recent quarter: the revenue "
+                "guidance from its earnings press release vs. the revenue it then reported, with a verdict "
+                "(beat / met / missed / pending) and the gap vs. the guidance midpoint, plus a summary. "
+                "Use it to judge management credibility and for 'what management said vs. delivered'."),
+            parameters_json_schema={
+                "type": "object",
+                "properties": {"ticker": {"type": "string", "enum": tickers}},
+                "required": ["ticker"],
+            },
+        ),
     ]
 
 
@@ -194,12 +214,41 @@ def _format(labeled: list[tuple[str, dict]]) -> list[dict]:
     return out
 
 
+def _guidance_tool(ticker: str, registry: SourceRegistry) -> dict:
+    rec = guidance_record(ticker)
+    if not rec["guidance_given"]:
+        return {"results": [], "summary": rec["summary"]}
+    rows, lines = [], []
+    for c in rec["comparisons"]:
+        (g_id, _), *rest = registry.add([c["guide"]] + ([c["actual"]] if c["actual"] else []))
+        a_id = rest[0][0] if rest else None
+        gap = f"{c['gap_vs_mid_pct']:+.1f}%" if c["gap_vs_mid_pct"] is not None else None
+        actual = c["actual"]["value_text"] if c["actual"] else None
+        rows.append({"period": c["period"], "guided": c["guide"]["range_text"], "guidance_id": g_id,
+                     "actual": actual, "actual_id": a_id, "verdict": c["verdict"], "gap_vs_midpoint": gap,
+                     **({"derived_actual": True} if c["actual"] and c["actual"].get("derived") else {})})
+        lines.append(f"{c['period']}: guided {c['guide']['range_text']}, actual {actual or 'not reported yet'}, "
+                     f"{c['verdict']}" + (f" ({gap} vs. midpoint)" if gap else ""))
+    # the computed summary is itself a citable source, so "beat 4 of 5" can be verified
+    summary_item = {"chunk_id": f"GUIDE_SUMMARY::{rec['ticker']}", "ticker": rec["ticker"], "doc_type": "guidance_record",
+                    "date": rec["comparisons"][-1]["guide"]["date"], "section": "Guidance record",
+                    "citation": f"{rec['ticker']} guidance record (computed from its earnings press releases and SEC filings)",
+                    "text": rec["summary"] + "\n" + "\n".join(lines) + "\nHow to read this: beating guidance every "
+                            "quarter can reflect cautious (conservative) guidance rather than outperformance; misses "
+                            "are the stronger warning sign.", "url": None, "similarity": None}
+    (s_id, _), = registry.add([summary_item])
+    return {"summary": rec["summary"], "summary_id": s_id, "comparisons": rows,
+            "how_to_read": "Beating guidance every quarter can mean cautious guidance; misses are the stronger signal."}
+
+
 def run_tool(name: str, args: dict, registry: SourceRegistry) -> dict:
     """Run one Gemini function call. Never raises: errors go back to the model
     as {"error": ...} so it can fix its arguments and retry."""
     args = dict(args or {})
     k = max(1, min(int(args.pop("k", DEFAULT_K) or DEFAULT_K), MAX_K))
     try:
+        if name == "get_guidance_record":
+            return _guidance_tool(args["ticker"], registry)
         if name == "get_financials":
             last = max(1, min(int(args.get("last") or 6), 12))
             rows = get_financials(args["ticker"], args.get("metrics"), args.get("period", "quarterly"), last)
@@ -257,8 +306,10 @@ def answer_with_tools(question: str, system_prompt: str = "", model: str = MODEL
         parts = []
         for c in calls:
             result = run_tool(c.name, dict(c.args or {}), registry)
-            log.append({"tool": c.name, "args": dict(c.args or {}),
-                        "returned": [r["id"] for r in result.get("results", [])], "error": result.get("error")})
+            returned = ([r["id"] for r in result.get("results", [])]
+                        + [i for row in result.get("comparisons", []) for i in (row["guidance_id"], row["actual_id"]) if i]
+                        + ([result["summary_id"]] if result.get("summary_id") else []))
+            log.append({"tool": c.name, "args": dict(c.args or {}), "returned": returned, "error": result.get("error")})
             parts.append(types.Part.from_function_response(name=c.name, response=result))
         contents.append(types.Content(role="user", parts=parts))
     else:

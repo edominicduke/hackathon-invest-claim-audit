@@ -26,6 +26,8 @@ Checks, in order:
                        sources (the grounding API is harsh on
                        sentences combining several facts)            -> "supported" / "partial" / "unsupported"
                        "partial" lists the parts with no source in s["unsupported_parts"]
+  table rows           lines starting with "|": every $ amount and % must appear in the
+                       row's cited sources (rounding allowed). Deterministic, no API call.
 
 Number-vs-SEC-data checking is the Checking Results teammate's job; this
 module only checks citations.
@@ -54,6 +56,14 @@ _TAG_NUM = re.compile(r"\d+")
 _TAG_AFTER_PUNCT = re.compile(r"([.!?])((?:\s*" + _TAG.pattern + r")+)")
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"'(*\[])")
 _HAS_NUMBER = re.compile(r"\d")
+# A QUANTITY (not a product name like "Intel 18A"/"MI300", a year, "Q4 2026" or a date):
+# money, percentages, numbers with units, decimals, or numbers with thousands separators.
+_QUANTITY = re.compile(
+    r"\$\s?\d"
+    r"|\b\d+(?:\.\d+)?\s?(?:%|(?:percent|billion|million|thousand|trillion|bps|basis points)\b)"
+    r"|(?<![\w.-])\d+\.\d+(?![\w-])"
+    r"|\b\d{1,3}(?:,\d{3})+\b", re.I)
+_META = re.compile(r"^\W*(whether|evaluating|to evaluate|to answer|based on|in summary|here is|here's|below)\b", re.I)
 _LIST_MARK = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
 
 
@@ -84,11 +94,24 @@ def split_sentences(answer: str) -> list[str]:
         line = line.strip()
         if not line:
             continue
-        if line.startswith("#"):          # heading: keep whole ("### 2. Gaining share" is not two sentences)
+        if line.startswith("#") or line.startswith("|"):   # headings and table rows stay whole
             out.append(line)
             continue
-        out.extend(s.strip() for s in _SENT_SPLIT.split(line) if s.strip())
+        # keep a list marker ("1.", "-", "*") attached to its first sentence, so "1." is never a sentence
+        m = _LIST_MARK.match(line)
+        prefix, rest = (line[:m.end()], line[m.end():]) if m else ("", line)
+        parts = [s.strip() for s in _SENT_SPLIT.split(rest) if s.strip()]
+        if parts:
+            parts[0] = prefix + parts[0]
+            out.extend(parts)
+        elif prefix.strip():
+            out.append(prefix.strip())
     return out
+
+
+_INTERPRETATION = re.compile(
+    r"^\W*(this|that|these|those|overall|taken together|in short|in other words|together)\b"
+    r"(?:\W+\w+){0,10}?\W+(suggests?|indicates?|implies|imply|may|might|could|appears?|seems?)\b", re.I)
 
 
 def _needs_citation(sentence_text: str) -> str | None:
@@ -97,11 +120,66 @@ def _needs_citation(sentence_text: str) -> str | None:
     if s.startswith("#") or s.endswith("?") or s.endswith(":") or set(s) <= set("-_=* "):
         return None                                   # heading, question, lead-in, divider
     body = _LIST_MARK.sub("", s)
-    if _HAS_NUMBER.search(body):
+    if _QUANTITY.search(body):
         return "uncited_number"
+    if _INTERPRETATION.match(body):
+        return "interpretation"                       # framed analysis, uncited by design (not a warning)
+    if _META.match(body):
+        return None                                   # framing sentence ("Whether you should buy... depends on...")
     if len(body.split()) >= UNCITED_CLAIM_MIN_WORDS:
         return "uncited_claim"
     return None
+
+
+# ---------- table rows: deterministic number check ----------
+
+_MONEY = re.compile(r"(-?)\$\s?(\d[\d,]*(?:\.\d+)?)\s*(billion|million|thousand|bn|b|m|k)?\b", re.I)
+_PCT = re.compile(r"([+\-−]?\d+(?:\.\d+)?)\s?%")
+_SCALE = {"billion": 1e9, "bn": 1e9, "b": 1e9, "million": 1e6, "m": 1e6, "thousand": 1e3, "k": 1e3}
+_TABLE_SEP = re.compile(r"^\|?[\s:\-|]+\|?$")
+
+
+def _money_values(text: str) -> list[float]:
+    out = []
+    for sign, num, unit in _MONEY.findall(text):
+        v = float(num.replace(",", "")) * _SCALE.get((unit or "").lower(), 1)
+        out.append(-v if sign else v)
+    return out
+
+
+def _pct_values(text: str) -> list[float]:
+    return [float(p.replace("−", "-")) for p in _PCT.findall(text)]
+
+
+def _check_table_row(row: str, cited: list[str], sources: dict[str, dict]) -> tuple[str, list[str]]:
+    """Every $ amount and % in a table row must appear in its cited sources (rounding allowed).
+    Percentages may also come from a computed guidance record in the conversation."""
+    body = _TAG.sub("", row)
+    ref = " ".join(sources[l]["text"] for l in cited if l in sources)
+    ref_pct = ref + " " + " ".join(h["text"] for h in sources.values() if h.get("doc_type") == "guidance_record")
+    have_money, have_pct = _money_values(ref), _pct_values(ref_pct)
+    missing = []
+    for v in _money_values(body):
+        if not any(abs(v - h) <= 0.006 * max(abs(v), abs(h), 1) for h in have_money):
+            missing.append(f"${v / 1e9:,.2f} billion" if abs(v) >= 1e9 else f"${v:,.0f}")
+    for p in _pct_values(body):
+        if not any(abs(p - h) <= 0.051 for h in have_pct):
+            missing.append(f"{p:+.1f}%")
+    checked = len(_money_values(body)) + len(_pct_values(body))
+
+    # Result column: if the row has guidance (range or point) + actual, the verdict word must match the numbers
+    vals = _money_values(body)
+    word = re.search(r"\b(beat|met|within|in range|missed|miss)\b", body, re.I)
+    if word and len(vals) in (2, 3):
+        low, high, actual = (vals[0], vals[1], vals[2]) if len(vals) == 3 else (vals[0], vals[0], vals[1])
+        expected = "beat" if actual > high else "missed" if actual < low else "met"
+        said = {"within": "met", "in range": "met", "miss": "missed"}.get(word.group(1).lower(), word.group(1).lower())
+        if said != expected:
+            return "unsupported", missing + [f"result says '{word.group(1)}' but the numbers show '{expected}'"]
+
+    if not missing:
+        return "supported", []
+    return ("partial" if len(missing) < checked else "unsupported"), missing
 
 
 # ---------- support check (Vertex AI check grounding API) ----------
@@ -242,14 +320,27 @@ def verify_citations(answer: str, sources: dict[str, dict], check_support: bool 
         claim = _TAG.sub("", text).strip()
         claim = re.sub(r"\s+([.!?,;:])", r"\1", claim)
         invalid = [l for l in cited if l not in sources]
+        entry = {"sentence": claim, "cited": cited, "invalid": invalid, "support": None}
+        if text.startswith("|"):
+            if _TABLE_SEP.match(text) or (not cited and not _money_values(text) and not _pct_values(text)):
+                entry["status"] = "no_claim"                      # separator or header row
+            elif invalid:
+                entry["status"] = "invalid_citation"
+            elif not cited:
+                entry["status"] = "uncited_number"
+            else:
+                entry["status"], entry["unsupported_parts"] = _check_table_row(text, cited, sources)
+                entry["method"] = "table"
+            sentences.append(entry)
+            continue
         if invalid:
             status = "invalid_citation"
         elif not cited:
             status = _needs_citation(claim) or "no_claim"
         else:
             status = "cited"
-        sentences.append({"sentence": claim, "cited": cited, "invalid": invalid,
-                          "status": status, "support": None})
+        entry["status"] = status
+        sentences.append(entry)
 
     if check_support:
         todo = [s for s in sentences if s["status"] == "cited"]
@@ -295,13 +386,16 @@ def verify_citations(answer: str, sources: dict[str, dict], check_support: bool 
 
 
 def print_report(report: dict) -> None:
-    marks = {"supported": "OK ", "cited": "OK ", "no_claim": "   ", "weak": "WEAK", "partial": "PART",
+    marks = {"supported": "OK ", "cited": "OK ", "no_claim": "   ", "interpretation": "   ",
+             "weak": "WEAK", "partial": "PART",
              "uncited_claim": "WARN", "uncited_number": "FAIL", "invalid_citation": "FAIL",
              "unsupported": "FAIL"}
     for s in report["sentences"]:
         extra = f" support={s['support']}" if s["support"] is not None else ""
         if s.get("method") == "judge":
             extra += " (checked fact by fact)"
+        elif s.get("method") == "table":
+            extra += " (table row: numbers checked)"
         bad = f" invalid={s['invalid']}" if s["invalid"] else ""
         print(f"[{marks.get(s['status'], '?'):4}] {s['status']:<16}{s['cited']}{bad}{extra}\n        {s['sentence']}")
         for part in s.get("unsupported_parts", []):

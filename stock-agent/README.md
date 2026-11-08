@@ -137,6 +137,7 @@ checks that every sentence the AI writes is supported by the source it cites.
 | `src/ingest/embed.py`, `build_index.py` | Embeddings (Vertex `gemini-embedding-001`) and building the search index |
 | `src/ingest/search.py` | Hybrid search (keyword + embeddings), competitor search, filter checks |
 | `src/ingest/financials.py` | Cleaned official numbers (revenue, net income, EPS...) for the AI to cite |
+| `src/ingest/guidance.py` | Said vs. delivered: revenue guidance from press releases vs. reported revenue |
 | `src/ingest/tools.py` | The AI's tools, `[S#]` source labels, `answer_with_tools()`, citation rules |
 | `src/ingest/verify.py` | Feature #3: checks every cited sentence against its sources |
 | `src/ingest/check_pipeline.py` | End-to-end health check |
@@ -192,6 +193,15 @@ export ALPHAVANTAGE_API_KEY=...
 python -m src.ingest.edgar_fetch MSFT
 python -m src.ingest.transcripts_fetch MSFT --quarters 2026Q1 2026Q2
 python -m src.ingest.build_index                               # always run after fetching
+python -m src.ingest.guidance --extract                        # re-read press releases for guidance
+```
+
+Guidance (said vs. delivered), after fetching press releases:
+
+```bash
+python -m src.ingest.guidance --extract       # Gemini pulls revenue guidance out of each press release (~cents)
+python -m src.ingest.guidance --review        # CHECK each number against its quote, then set "reviewed": true in the file
+python -m src.ingest.guidance --show NVDA     # guided vs. actual, verdict, gap
 ```
 
 ## Functions
@@ -208,6 +218,7 @@ python -m src.ingest.build_index                               # always run afte
 - `search_documents`: filings, transcripts and papers; filter by company, document type, date
 - `search_competitors`: a company's rivals (NVDA → AMD, INTC); results are marked so the answer names the rival
 - `get_financials`: official reported numbers, one row per quarter or year, each with its own `[S#]`
+- `get_guidance_record`: revenue guidance vs. what was then reported, per quarter (beat / met / missed / pending), plus a summary. The AI reports it in 1-2 sentences and, if useful, one small table (max 5 rows)
 
 **Citation check (#3)**
 - `verify_citations(answer, sources, check_support=True)`: each sentence comes back with a `status`:
@@ -255,6 +266,9 @@ payload = {
 - A ticker filter never returns another company's documents. Papers count if they're tagged with that company.
 - The AI only uses retrieved sources, one fact per sentence. Its own analysis goes in separate, uncited sentences ("This suggests...").
 - Official numbers: restated values use the latest filing, and Q4 is computed (full year minus 9 months), marked `derived`. Never for EPS.
+- Guidance: guidance in a press release filed on date D is matched to the first quarter ending after D (works for any fiscal calendar). beat = above the range, met = inside, missed = below. Each guidance quote is checked word for word against the press release; unverified ones are left out. NVDA, AMD and INTC give numeric guidance; GOOGL doesn't, and TSLA's is mostly qualitative.
+- Beating guidance every quarter can just mean cautious guidance; misses are the stronger warning sign.
+- Table rows in answers are checked by number: every $ amount and % must appear in the row's cited sources.
 - If Google Cloud can't be reached, search falls back to keyword-only. The AI and the citation check still need Google Cloud.
 - Data: NVDA, AMD, INTC, TSLA, GOOGL, as of the last download.
 
@@ -263,7 +277,8 @@ payload = {
 1. `python -m src.ingest.search --describe`: what's in the evidence base
 2. `python -m src.ingest.verify "What are INTC's competitors doing that could hurt it?"`: an answer with every sentence checked, unsupported details named, and a diagnosis
 3. `python -m src.ingest.financials INTC`: official numbers, with computed rows marked
-4. Before and after (same question, as the citation rules and checks were added):
+4. `python -m src.ingest.guidance --show NVDA`: what NVIDIA guided vs. what it delivered
+5. Before and after (same question, as the citation rules and checks were added):
 
 | Version | Supported | Partly | Unsupported | Passes |
 |---|---|---|---|---|
