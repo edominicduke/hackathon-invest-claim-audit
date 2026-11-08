@@ -287,6 +287,27 @@ def answer_with_tools(question: str, system_prompt: str = "", model: str = MODEL
     }
 
 
+def to_storage_sources(result: dict, max_sources: int = 50, max_text: int = 4000,
+                       include_url: bool = False) -> list[dict]:
+    """Convert answer_with_tools() sources into the storage API's format
+    (POST /api/recommendations "sources": label <= 120 chars, text <= 4,000, <= 50 sources).
+    Only the sources the answer actually cites are sent."""
+    used = result["verification"].get("used_sources") or result["sources"]
+    out = []
+    for sid, h in list(used.items())[:max_sources]:
+        src = {
+            "label": f"{sid} {h['citation']}"[:120],
+            "document": h["doc_type"],
+            "date": h.get("date_norm") or h.get("date"),
+            "page": h.get("section") or h.get("period_label") or "",
+            "text": h["text"][:max_text],
+        }
+        if include_url and h.get("url"):
+            src["url"] = h["url"]
+        out.append(src)
+    return out
+
+
 def _final_prompt(question: str, registry: SourceRegistry) -> str:
     block = "\n\n".join(f"[{label}] {h['citation']}\n{h['text']}" for label, h in registry.sources.items())
     return (f"{question}\n\n"

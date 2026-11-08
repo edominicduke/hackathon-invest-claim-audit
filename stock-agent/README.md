@@ -119,3 +119,164 @@ python -m src.checks.results_check --data-dir data
 
 ## Not financial advice
 This is a student research project. It doesn't connect to any brokerage and makes no trades.
+
+# Stock Agent: Data + Search + Citations (Feature #3, evidence for #6 and #9)
+
+The "evidence" of the agent. Downloads primary sources (SEC filings, earnings call transcripts,
+SEC financial data, research papers), makes them searchable, gives the AI tools to use them, and
+checks that every sentence the AI writes is supported by the source it cites.
+
+## Files
+
+| File | What it does |
+|---|---|
+| `src/ingest/edgar_fetch.py` | Downloads 10-K, 10-Q and 8-K earnings press releases from SEC EDGAR, plus official financial data (XBRL) |
+| `src/ingest/transcripts_fetch.py` | Earnings call transcripts from Alpha Vantage (free key, 25/day) |
+| `src/ingest/arxiv_fetch.py` | Research papers from arXiv, tagged with the companies whose technology they cover |
+| `src/ingest/chunk.py` | Splits documents into small chunks with a source label (company, document, date, section) |
+| `src/ingest/embed.py`, `build_index.py` | Embeddings (Vertex `gemini-embedding-001`) and building the search index |
+| `src/ingest/search.py` | Hybrid search (keyword + embeddings), competitor search, filter checks |
+| `src/ingest/financials.py` | Cleaned official numbers (revenue, net income, EPS...) for the AI to cite |
+| `src/ingest/tools.py` | The AI's tools, `[S#]` source labels, `answer_with_tools()`, citation rules |
+| `src/ingest/verify.py` | Feature #3: checks every cited sentence against its sources |
+| `src/ingest/check_pipeline.py` | End-to-end health check |
+| `src/ingest/eval_retrieval.py`, `label_checker.py` | Evaluations: search quality, checker accuracy |
+| `src/ingest/common.py`, `llm.py` | Shared helpers |
+| `src/data/` | Downloaded documents, search index, eval files |
+
+## Who built what
+
+| Part | Owner | Files |
+|---|---|---|
+| Data, search, citations (#3) | Gurinder | everything in `src/ingest/`, `src/data/` |
+
+`tools.py` is where this part meets the AI Answers part: Ethan's prompts call `answer_with_tools()`.
+
+## Run it (Mac, VS Code terminal)
+
+```bash
+cd stock-agent
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Google Cloud, once per laptop (your account must be added to the project in IAM):
+
+```bash
+gcloud auth login
+gcloud auth application-default login
+gcloud config set project <PROJECT_ID>
+gcloud auth application-default set-quota-project <PROJECT_ID>
+```
+
+Once per terminal (or add to `~/.zshrc`):
+
+```bash
+export GOOGLE_CLOUD_PROJECT=<PROJECT_ID>
+export GOOGLE_CLOUD_LOCATION=global
+export GOOGLE_GENAI_USE_VERTEXAI=True
+```
+
+Then, from `stock-agent/`:
+
+```bash
+python -m src.ingest.check_pipeline --no-agent              # health check, should end with 0 fail
+python -m src.ingest.tools "What are the biggest risks to Intel?"   # ask the agent
+```
+
+The data is already in the repo, so there's nothing to download. To add a company:
+
+```bash
+export SEC_IDENTITY="Team1J-StockAgent yourname@example.com"   # the SEC requires a contact
+export ALPHAVANTAGE_API_KEY=...
+python -m src.ingest.edgar_fetch MSFT
+python -m src.ingest.transcripts_fetch MSFT --quarters 2026Q1 2026Q2
+python -m src.ingest.build_index                               # always run after fetching
+```
+
+## Functions
+
+**Ask the agent (Ethan)**
+- `answer_with_tools(question, system_prompt)`: the AI searches, writes an answer with `[S#]` citations, and the answer is checked. Returns:
+  - `answer`: text with `[S1]`, `[S2]`... citations
+  - `verification`: the citation check (below)
+  - `sources`: `{"S1": {citation, url, text, ...}}` for showing sources in the UI
+  - `tool_calls`: what the AI searched for
+- `to_storage_sources(result)`: converts `sources` into the storage format (below)
+
+**The AI's tools** (called by Gemini, not by you)
+- `search_documents`: filings, transcripts and papers; filter by company, document type, date
+- `search_competitors`: a company's rivals (NVDA → AMD, INTC); results are marked so the answer names the rival
+- `get_financials`: official reported numbers, one row per quarter or year, each with its own `[S#]`
+
+**Citation check (#3)**
+- `verify_citations(answer, sources, check_support=True)`: each sentence comes back with a `status`:
+  - `supported`: every fact is in the cited sources
+  - `partial`: some details aren't, and `unsupported_parts` lists them (e.g. `["MI400"]`). Show these in the UI
+  - `unsupported`: the claim isn't in the cited sources
+  - `invalid_citation`: cites an `[S#]` that was never retrieved
+  - `uncited_number`: a number with no citation
+- `ok` is `false` if anything is `unsupported`, `invalid_citation` or `uncited_number`. `partial` is a warning.
+
+**Direct use**
+- `search(query, tickers, doc_types, date_from, date_to, k)`: search without the AI
+- `get_financials(ticker, metrics, period, last)`, `clean_facts(ticker)`: official numbers (cleaned)
+
+## The format we send (agree on this!)
+
+**Ethan → `POST /api/recommendations`**, using this part's output:
+```python
+result = answer_with_tools(question, system_prompt=CHALLENGE_PROMPT)
+payload = {
+    "company": "NVDA",
+    "user_reason": "...",
+    "verdict": "yellow",
+    "confidence": "medium",
+    "summary": result["answer"],                      # keeps [S#]; the number check ignores citations
+    "sources": to_storage_sources(result),            # only the cited sources, in the storage format
+    "created_by": "agent",
+}
+```
+`to_storage_sources()` produces exactly what storage expects:
+```json
+{"label": "S3 INTC 10-Q (filed 2025-10-31), Item 2 MD&A",
+ "document": "10-Q", "date": "2025-10-31", "page": "Part I Item 2 MD&A",
+ "text": "Revenue for the quarter was $13.7 billion..."}
+```
+- `label` starts with the `[S#]` used in the summary, so the UI can link citations to sources
+- SEC filings have no page numbers (they're HTML), so `page` holds the section
+- Financial rows come through with `document: "xbrl_fact"`
+- Limits are applied for you: label ≤ 120 characters, text ≤ 4,000, ≤ 50 sources
+
+## Rules
+
+- Search filters are checked: an unknown ticker or document type gives an error listing the valid ones.
+  Valid document types: `10-K`, `10-Q`, `8-K_press_release`, `8-K_transcript`, `earnings_call`, `paper`.
+- A ticker filter never returns another company's documents. Papers count if they're tagged with that company.
+- The AI only uses retrieved sources, one fact per sentence. Its own analysis goes in separate, uncited sentences ("This suggests...").
+- Official numbers: restated values use the latest filing, and Q4 is computed (full year minus 9 months), marked `derived`. Never for EPS.
+- If Google Cloud can't be reached, search falls back to keyword-only. The AI and the citation check still need Google Cloud.
+- Data: NVDA, AMD, INTC, TSLA, GOOGL, as of the last download.
+
+## Demo
+
+1. `python -m src.ingest.search --describe`: what's in the evidence base
+2. `python -m src.ingest.verify "What are INTC's competitors doing that could hurt it?"`: an answer with every sentence checked, unsupported details named, and a diagnosis
+3. `python -m src.ingest.financials INTC`: official numbers, with computed rows marked
+4. Before and after (same question, as the citation rules and checks were added):
+
+| Version | Supported | Partly | Unsupported | Passes |
+|---|---|---|---|---|
+| Original | 1 | – | 15 | no |
+| Stricter citation rules | 8 | – | 7 | no |
+| + fact-by-fact check | 10 | 6 | 1 | no |
+| Final | 12 | 6 | 0 | yes |
+
+## Tests
+
+- `python -m src.ingest.check_pipeline`: data, index, search, financials, citation check, and 3 real agent questions
+- `python -m src.ingest.eval_retrieval --generate 40`, then `--judge -v`: does search find the right passage
+- `python -m src.ingest.label_checker --collect 30`, then `--label`, then `--report`: does the citation check agree with a person
+
+## Not financial advice
+This is a student research project. It doesn't connect to any brokerage and makes no trades.
