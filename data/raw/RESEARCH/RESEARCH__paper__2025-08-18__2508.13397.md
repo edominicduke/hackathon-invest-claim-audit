@@ -1,5 +1,0 @@
-Optimizing Allreduce Operations for Modern Heterogeneous Architectures with Multiple Processes per GPU
-
-Authors: Michael Adams, Amanda Bienz
-
-Abstract: Large inter-GPU all-reduce operations, prevalent throughout deep learning, are bottlenecked by communication costs. Emerging heterogeneous architectures are comprised of complex nodes, often containing $4$ GPUs and dozens to hundreds of CPU cores per node. Parallel applications are typically accelerated on the available GPUs, using only a single CPU core per GPU while the remaining cores sit idle. This paper presents novel optimizations to large GPU-aware all-reduce operations by extending the lane-aware algorithm to heterogeneous architectures and notably using multiple CPU cores per GPU to accelerate these operations. Using GPUDirect RDMA and host copy communications respectively, these multi-CPU-accelerated GPU-aware all-reduces yield speedups over system MPI of up to $3$x on LLNL's Tuolumne supercomputer and up to $2.45$x for large MPI all-reduces across the NVIDIA A100 GPUs of NCSA's Delta supercomputer.

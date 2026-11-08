@@ -1,5 +1,0 @@
-Coherent errors in stabilizer codes caused by quasistatic phase damping
-
-Authors: Dávid Pataki, Áron Márton, János K. Asbóth, András Pályi
-
-Abstract: Quantum error correction is a key challenge for the development of practical quantum computers, a direction in which significant experimental progress has been made in recent years. In solid-state qubits, one of the leading information loss mechanisms is dephasing, usually modelled by phase flip errors. Here, we introduce quasistatic phase damping, a more subtle error model which describes the effect of Larmor frequency fluctuations due to 1/f noise. We show how this model is different from a simple phase flip error model, in terms of multi-cycle error correction. Considering the surface code, we provide numerical evidence for an error threshold, in the presence of quasistatic phase damping and readout errors. We discuss the implications of our results for spin qubits and superconducting qubits.

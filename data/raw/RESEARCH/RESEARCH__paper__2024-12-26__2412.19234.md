@@ -1,5 +1,0 @@
-Evolution, Challenges, and Optimization in Computer Architecture: The Role of Reconfigurable Systems
-
-Authors: Jefferson Ederhion, Festus Zindozin, Hillary Owusu, Chukwurimazu Ozoemezim, Mmeri Okere, Opeyemi Owolabi, Olalekan Fagbo, Oyetubo Oluwatosin
-
-Abstract: The evolution of computer architecture has led to a paradigm shift from traditional single-core processors to multi-core and domain-specific architectures that address the increasing demands of modern computational workloads. This paper provides a comprehensive study of this evolution, highlighting the challenges and key advancements in the transition from single-core to multi-core processors. It also examines state-of-the-art hardware accelerators, including Tensor Processing Units (TPUs) and their derivatives, RipTide and the Catapult fabric, and evaluates their strategies for optimizing critical performance metrics such as energy consumption, latency, and flexibility. Ultimately, this study emphasizes the role of reconfigurable systems in overcoming current architectural challenges and driving future advancements in computational efficiency.

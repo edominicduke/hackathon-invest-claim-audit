@@ -1,5 +1,0 @@
-Prediction of Alpha-Particle-Immune Gate-All-Around Field-Effect Transistors (GAA-FET) Based SRAM Design
-
-Authors: Albert Lu, Reza Arghavani, Hiu Yung Wong
-
-Abstract: In this paper, using 3D Technology Computer-Aided-Design (TCAD) simulations, we show that it is possible to design a static random-access memory (SRAM) using gate-all-around field-effect-transistor (GAA-FET) technology so that it is immune to single alpha particle radiation error. In other words, with the design, there will be no single-event upset (SEU) due to alpha particles. We first use ab initio calculations in PHITS to show that there is a maximum linear energy transfer (LET), LETmax, for the alpha particle in Si and Si$_x$Ge$_{1-x}$. Based on that, by designing a sub-7nm GAA-FET-based SRAM with bottom dielectric isolation (BDI), we show that the SRAM does not flip even if the particle strike is in the worst-case scenario.

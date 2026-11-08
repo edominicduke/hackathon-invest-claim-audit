@@ -1,5 +1,0 @@
-Improving inference time in multi-TPU systems with profiled model segmentation
-
-Authors: Jorge Villarrubia, Luis Costero, Francisco D. Igual, Katzalin Olcoz
-
-Abstract: In this paper, we systematically evaluate the inference performance of the Edge TPU by Google for neural networks with different characteristics. Specifically, we determine that, given the limited amount of on-chip memory on the Edge TPU, accesses to external (host) memory rapidly become an important performance bottleneck. We demonstrate how multiple devices can be jointly used to alleviate the bottleneck introduced by accessing the host memory. We propose a solution combining model segmentation and pipelining on up to four TPUs, with remarkable performance improvements that range from $6\times$ for neural networks with convolutional layers to $46\times$ for fully connected layers, compared with single-TPU setups.

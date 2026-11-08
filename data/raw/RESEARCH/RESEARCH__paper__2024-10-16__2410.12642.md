@@ -1,5 +1,0 @@
-Optimization and Application of Cloud-based Deep Learning Architecture for Multi-Source Data Prediction
-
-Authors: Yang Zhang, Fa Wang, Xin Huang, Xintao Li, Sibei Liu, Hansong Zhang
-
-Abstract: This study develops a cloud-based deep learning system for early prediction of diabetes, leveraging the distributed computing capabilities of the AWS cloud platform and deep learning technologies to achieve efficient and accurate risk assessment. The system utilizes EC2 p3.8xlarge GPU instances to accelerate model training, reducing training time by 93.2% while maintaining a prediction accuracy of 94.2%. With an automated data processing and model training pipeline built using Apache Airflow, the system can complete end-to-end updates within 18.7 hours. In clinical applications, the system demonstrates a prediction accuracy of 89.8%, sensitivity of 92.3%, and specificity of 95.1%. Early interventions based on predictions lead to a 37.5% reduction in diabetes incidence among the target population. The system's high performance and scalability provide strong support for large-scale diabetes prevention and management, showcasing significant public health value.

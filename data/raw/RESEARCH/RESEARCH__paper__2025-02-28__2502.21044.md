@@ -1,5 +1,0 @@
-Improving error suppression with noise-aware decoding
-
-Authors: Evan T. Hockings, Andrew C. Doherty, Robin Harper
-
-Abstract: We demonstrate that the performance of quantum error correction can be improved with noise-aware decoders that are calibrated to the likelihood of physical error configurations in a device. We show that noise-aware decoding increases the error suppression factor of the surface code, yielding reductions in the logical error rate that increase exponentially with the code distance. Our calibration protocol involves circuit-level Pauli noise characterisation experiments with averaged circuit eigenvalue sampling. This enables decoder calibration at the scales required for fault-tolerant quantum computation and near-optimal decoding when compared to the true noise model. Our results indicate that these noise characterisation experiments could be performed and processed in seconds for superconducting quantum computers. This establishes the practicality and utility of noise-aware decoding for quantum error correction at scale.

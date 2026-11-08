@@ -1,5 +1,0 @@
-NWQWorkflow: The Northwest Quantum Workflow
-
-Authors: Ang Li
-
-Abstract: This whitepaper presents NWQWorkflow, an end-to-end workflow for quantum application development, compilation, error correction, benchmarking, numerical simulation, control, and execution on a prototype superconducting testbed. NWQWorkflow integrates NWQStudio (programming GUI environment), NWQASM (intermediate representation), QASMTrans (compiler), NWQEC (quantum error correction), QASMBench (benchmarking and characterization), NWQSim (HPC simulation), NWQLib (algorithm library), NWQData (data sets), NWQControl (quantum control), and NWQSC (superconducting testbed). The system enables closed-loop software-hardware co-design and reflects the past eight years of quantum computing research the author has led at PNNL (2018-2026). By releasing most software components as open source or planning their open-source availability, we aim to cultivate a collaborative quantum information science (QIS) ecosystem and support the transition toward a scalable quantum supercomputing era.

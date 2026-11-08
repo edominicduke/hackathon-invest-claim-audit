@@ -1,5 +1,0 @@
-FlyWheel: Attention Kernels Built for the TPU
-
-Authors: Zishuo Bao, Zeshen Zhang, Linkun Chen, Yucheng Lu
-
-Abstract: Attention kernels on Tensor Processing Units (TPUs) often underutilize their matrix units (MXUs) because of repeated matrix operand loads, vector-intensive computation, and dependencies that leave MXUs idle. We present FlyWheel, a set of fast TPU kernels for both softmax and linear attention. FlyWheel reformulates softmax and triangular inversion to reduce vector work, while coordinating data layouts to improve matrix operand reuse. It then overlaps independent computation to hide execution latency. We apply these techniques to both softmax attention and Gated DeltaNet on TPU v6e and v7x. FlyWheel speeds up softmax attention by up to $4.14\times$ over the state-of-the-art RPA kernel and $1.80\times$ over Splash Attention, reaching 81% of peak BF16 throughput on v6e. It also speeds up Gated DeltaNet prefill by up to $3.61\times$. Integrated into vLLM serving Qwen3.8-27B, FlyWheel improves prefill throughput by up to $1.56\times$ while maintaining comparable accuracy.

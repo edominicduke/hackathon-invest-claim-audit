@@ -1,5 +1,0 @@
-Lightweight Error-Correction Code Encoders in Superconducting Electronic Systems
-
-Authors: Yerzhan Mustafa, Berker Peköz, Selçuk Köse
-
-Abstract: Data transmission from superconducting electronic circuits, such as single flux quantum (SFQ) logic, to room-temperature electronics is susceptible to bit errors, which may result from flux trapping, fabrication defects, and process parameter variations (PPV). Due to the cooling power budget at 4.2 K and constraints on the chip area, the size of the error-correction code encoders is limited. In this work, three lightweight error-correction code encoders are proposed that are based on Hamming(7,4), Hamming(8,4), and Reed-Muller(1,3) codes and implemented with SFQ logic. The performance of these encoders is analyzed in the presence of PPV. The trade-offs between the theoretical complexity and physical size of error-correction code encoders are identified.

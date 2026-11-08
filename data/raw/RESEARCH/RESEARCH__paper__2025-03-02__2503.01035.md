@@ -1,5 +1,0 @@
-Balanced segmentation of CNNs for multi-TPU inference
-
-Authors: Jorge Villarrubia, Luis Costero, Francisco D. Igual, Katzalin Olcoz
-
-Abstract: In this paper, we propose different alternatives for convolutional neural networks (CNNs) segmentation, addressing inference processes on computing architectures composed by multiple Edge TPUs. Specifically, we compare the inference performance for a number of state-of-the-art CNN models taking as a reference inference times on one TPU and a compiler-based pipelined inference implementation as provided by the Google's Edge TPU compiler. Departing from a profiled-based segmentation strategy, we provide further refinements to balance the workload across multiple TPUs, leveraging their cooperative computing power, reducing work imbalance and alleviating the memory access bottleneck due to the limited amount of on-chip memory per TPU. The observed performance results compared with a single TPU yield superlinear speedups and accelerations up to 2.60x compared with the segmentation offered by the compiler targeting multiple TPUs.
