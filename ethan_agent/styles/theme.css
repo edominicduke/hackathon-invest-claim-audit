@@ -1,0 +1,209 @@
+/* Thesis Audit stylesheet: the only place custom CSS lives. Loaded once per run by
+   ui.components.load_css(). Design direction: "Research Note" - an editorial research report
+   (serif headlines, paper and ink) with a modern fintech's clarity. Light theme only.
+   Rules that depend on Streamlit internals are marked [internal].
+
+   Colour discipline: evidence colours (teal-green / amber / brick / slate) are deliberately NOT
+   market green/red. They grade how well filings back the *reasons*, not whether to buy.
+   Every status also carries an icon and a word, so meaning never relies on colour alone. */
+
+:root {
+  --paper: #FBFAF7;  --surface: #FFFFFF;  --sunken: #F3F0E9;
+  --ink: #172033;    --ink-2: #4A5568;    --ink-3: #566072;
+  --line: #E3DFD6;   --line-2: #CFC9BC;
+  --accent: #0F5F66; --accent-soft: #E3F0F0;
+  --good: #0B6E4F;   --good-bg: #E6F3EC;
+  --warn: #8A5A00;   --warn-bg: #FBF0D9;
+  --bad:  #A12B2B;   --bad-bg:  #F8E5E2;
+  --neutral: #4A5568; --neutral-bg: #ECEEF1;
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --radius: 10px;
+}
+
+/* ---- tone classes: one place maps a tone to its colours */
+.tone-good    { --fg: var(--good);    --bg: var(--good-bg); }
+.tone-warn    { --fg: var(--warn);    --bg: var(--warn-bg); }
+.tone-bad     { --fg: var(--bad);     --bg: var(--bad-bg); }
+.tone-neutral { --fg: var(--neutral); --bg: var(--neutral-bg); }
+
+/* ---- page frame: one readable, centred column (no sidebar in this app) */
+[data-testid="stMainBlockContainer"] { max-width: 1120px; margin: 0 auto;      /* [internal] */
+  padding: 4.5rem 1.5rem 3rem; }
+.stApp { background: var(--paper); }                                             /* [internal] */
+h1, h2, h3 { font-family: var(--serif); letter-spacing: -0.01em; }
+.ta-header-row { display:flex; justify-content:flex-end; margin-bottom:14px; }
+
+/* ---- header (logo + top nav) shares the content column, so left edges line up */
+[data-testid="stToolbar"] > div {                                                    /* [internal] */
+  padding-left: max(0px, calc((100% - 1120px) / 2 + 0.5rem)) !important;   /* logo block brings its own 1rem */
+  padding-right: max(0px, calc((100% - 1120px) / 2 + 0.5rem)) !important; }
+
+/* ---- stack side-by-side columns on narrow screens */
+@media (max-width: 900px) {
+  [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]) { flex-direction: column; }   /* [internal] */
+  [data-testid="stColumn"] { width: 100% !important; flex: 1 1 100% !important; }               /* [internal] */
+}
+
+/* ---- streamlit widgets, matched to the theme */
+.stButton > button[kind="primary"], .stFormSubmitButton > button[kind="primaryFormSubmit"] {   /* [internal] */
+  background: var(--accent); border-color: var(--accent); color:#fff; font-weight:600; }
+.stButton > button[kind="primary"]:hover { background:#0B4A50; border-color:#0B4A50; }
+.stButton > button[kind="secondary"] { background: var(--surface); border:1px solid var(--line);   /* [internal] */
+  color: var(--ink); font-weight:500; justify-content:flex-start; text-align:left; }
+.stButton > button[kind="secondary"]:hover { border-color: var(--accent); color: var(--accent); }
+[data-testid="stTextArea"] textarea { background: var(--surface); }                                /* [internal] */
+[data-baseweb="tab-list"] { gap: 6px; }                                                           /* [internal] */
+
+/* ---- landing: text area, CTA, pills, captions */
+/* The wrapper owns the border; the textarea is transparent so it can't paint over the left edge. */
+[data-testid="stTextArea"] div:has(> textarea) { border:1px solid var(--line-2) !important; border-radius:8px;   /* [internal] */
+  background: var(--surface); overflow:hidden; box-shadow:none; }
+[data-testid="stTextArea"] div:has(> textarea):focus-within { border-color: var(--accent) !important; box-shadow:0 0 0 1px var(--accent); }
+[data-testid="stTextArea"] textarea { background: transparent !important; border:0 !important; box-shadow:none !important; }
+[data-testid="stTextArea"] textarea::placeholder { color: var(--ink-3); opacity:1; }
+.st-key-cta button { min-height:3.1rem; padding:0 2.2rem; font-size:1.05rem; }                 /* [internal] */
+.ta-cta-note { color: var(--ink-3); font-size:0.82rem; margin-top:-6px; }
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] * { color: var(--ink-3) !important; }   /* [internal] */
+
+[data-testid="stButtonGroup"] button { font-size:0.84rem; }                                 /* [internal] */
+
+/* ---- typography helpers */
+.ta-mono { font-family: var(--mono); font-size:0.86em; }
+.ta-muted { color: var(--ink-3); font-size:0.86rem; line-height:1.5; }
+.ta-muted-block { margin-bottom:12px; }
+.ta-mt0 { margin-top:0 !important; }
+.ta-mt8 { margin-top:8px; }
+.ta-mb6 { margin-bottom:6px; }
+.ta-mb8 { margin-bottom:8px; }
+.ta-section { font-family: var(--sans); font-size:0.72rem; font-weight:700; color: var(--ink-3);
+  text-transform:uppercase; letter-spacing:.09em; margin:26px 0 10px; display:flex; align-items:center; gap:10px; }
+.ta-section::after { content:""; flex:1; height:1px; background: var(--line); }
+.ta-list { margin:4px 0 0 0; padding-left:18px; }
+.ta-list li { margin-bottom:5px; }
+
+/* ---- hero (landing) */
+.ta-eyebrow { font-size:0.74rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color: var(--accent); margin-bottom:6px; }
+.ta-hero-title { font-family: var(--serif) !important; font-size:2.7rem !important; font-weight:600 !important;
+  letter-spacing:-0.025em; color: var(--ink); line-height:1.08 !important; margin:2px 0 18px !important; padding:0 !important;
+  text-wrap: balance; }
+.ta-hero-sub { color: var(--ink-2); font-size:1.05rem; line-height:1.55; margin-bottom:14px; max-width:34em; text-wrap: pretty; }
+.ta-trust { display:flex; flex-wrap:wrap; gap:6px 16px; margin:0 0 6px; color: var(--ink-2); font-size:0.8rem; font-weight:500; }
+.ta-trust span::before { content:"\2713"; color: var(--accent); font-weight:700; margin-right:6px; }
+.ta-chip { display:inline-flex; align-items:center; gap:7px; padding:4px 12px; border-radius:999px; font-size:0.76rem; font-weight:600;
+  border:1px solid var(--line-2); color: var(--ink-2); background: var(--surface); }
+.ta-chip::before { content:""; width:7px; height:7px; border-radius:50%; background: var(--good); flex:none; }
+
+/* ---- stepper */
+.ta-steps { display:flex; gap:0; margin:0 0 22px; border-bottom:1px solid var(--line); }
+.ta-step { flex:1; padding:10px 4px 12px; color: var(--ink-3); font-size:0.84rem; font-weight:500;
+  border-bottom:2px solid transparent; margin-bottom:-1px; display:flex; align-items:center; gap:9px; }
+.ta-step b { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%;
+  border:1px solid var(--line-2); font-size:0.74rem; font-weight:700; font-family: var(--mono); background: var(--surface); }
+.ta-step.active { color: var(--ink); border-bottom-color: var(--accent); font-weight:600; }
+.ta-step.active b { background: var(--accent); border-color: var(--accent); color:#fff; }
+.ta-step.done { color: var(--good); }
+.ta-step.done b { background: var(--good-bg); border-color: var(--good); color: var(--good); }
+
+/* ---- verdict scorecard */
+.ta-score { border:1px solid var(--line); border-top:4px solid var(--fg); border-radius: var(--radius);
+  background: var(--surface); padding:22px 26px 20px; margin-bottom:14px; box-shadow:0 1px 2px rgba(23,32,51,.04); }
+.ta-score-top { display:flex; justify-content:space-between; gap:24px; align-items:flex-start; flex-wrap:wrap; }
+.ta-score .eyebrow { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color: var(--ink-3); }
+.ta-score .label { font-family: var(--serif) !important; font-size:2.2rem; font-weight:600; letter-spacing:-0.02em; line-height:1.1;
+  margin:4px 0 6px; color: var(--fg); display:flex; align-items:center; gap:12px; }
+.ta-score .icon { display:inline-flex; width:34px; height:34px; border-radius:50%; background: var(--bg); color: var(--fg);
+  align-items:center; justify-content:center; font-size:1.05rem; font-family: var(--sans); font-weight:700; }
+.ta-score .meaning { color: var(--ink-2); max-width:36em; }
+.ta-score .meta { font-size:0.8rem; color: var(--ink-3); margin-top:8px; font-family: var(--mono); }
+.ta-score-side { min-width:150px; text-align:right; }
+.ta-stat { font-family: var(--serif); font-size:2rem; font-weight:600; line-height:1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ta-stat-k { font-size:0.7rem; color: var(--ink-3); text-transform:uppercase; letter-spacing:.08em; font-weight:600; margin-top:4px; }
+
+/* evidence-mix bar */
+.ta-mix { display:flex; height:10px; border-radius:999px; overflow:hidden; background: var(--neutral-bg); margin:18px 0 10px; gap:2px; }
+.ta-mix > i { display:block; height:100%; }
+.ta-mix .m-good { background: var(--good); } .ta-mix .m-bad { background: var(--bad); } .ta-mix .m-neutral { background:#9AA3B2; }
+.ta-mix-legend { display:flex; flex-wrap:wrap; gap:6px 22px; font-size:0.82rem; color: var(--ink-2); }
+.ta-mix-legend b { font-variant-numeric: tabular-nums; color: var(--ink); font-family: var(--mono); font-size:0.9em; }
+.ta-mix-legend i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; }
+
+/* ---- KPI tiles (track record) */
+.ta-kpis { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:12px; margin-bottom:6px; }
+.ta-kpi { border:1px solid var(--line); border-radius: var(--radius); padding:14px 16px; background: var(--surface); }
+.ta-kpi .v { font-family: var(--serif); font-size:1.9rem; font-weight:600; font-variant-numeric: tabular-nums; color: var(--ink); line-height:1.1; }
+.ta-kpi .k { font-size:0.7rem; color: var(--ink-3); text-transform:uppercase; letter-spacing:.07em; font-weight:600; margin-top:4px; }
+.ta-kpi.accent { border-top:3px solid var(--fg); }
+
+/* ---- cards, claims, quotes */
+.ta-card { border:1px solid var(--line); border-radius: var(--radius); padding:16px 20px; margin-bottom:12px; background: var(--surface); line-height:1.6; }
+.ta-card.accent { border-left:4px solid var(--fg); }
+.ta-card h4, .ta-flow h4 { padding:0 !important; }
+.ta-card h4 { margin:0 0 6px; font-family: var(--serif); font-size:1.12rem; font-weight:600; color: var(--ink); letter-spacing:-0.005em; }
+.ta-claim { display:grid; grid-template-columns:34px 1fr; gap:4px 14px; }
+.ta-claim .ci { width:30px; height:30px; border-radius:50%; background: var(--bg); color: var(--fg); display:flex; align-items:center;
+  justify-content:center; font-weight:700; font-size:0.95rem; margin-top:2px; }
+.ta-claim .cb { min-width:0; }
+.ta-pill { display:inline-flex; align-items:center; gap:5px; padding:2px 10px; border-radius:999px; font-size:0.72rem; font-weight:600;
+  margin:0 6px 6px 0; color: var(--fg); background: var(--bg); }
+.ta-tag { display:inline-block; padding:1px 8px; border-radius:6px; font-size:0.72rem; font-weight:500;
+  color: var(--ink-2); background: var(--sunken); margin:0 6px 6px 0; }
+.ta-quote { border-left:3px solid var(--line-2); padding:9px 14px; margin:12px 0 2px; color: var(--ink);
+  background: var(--paper); border-radius:0 6px 6px 0; font-family: var(--serif); font-size:1.02rem; line-height:1.5; font-style:italic; }
+.ta-quote.contra { border-left-color: var(--bad); }
+.ta-quote.support { border-left-color: var(--good); }
+.ta-src { font-size:0.76rem; color: var(--ink-3); margin-bottom:6px; }
+.cite { display:inline-block; font-family: var(--mono); font-size:0.66rem; font-weight:600; color: var(--accent); background: var(--accent-soft);
+  border-radius:4px; padding:0 5px; margin-left:2px; vertical-align:1px; cursor:help; font-style:normal; }
+
+/* ---- for / against */
+.ta-compare-for { --fg: var(--good); }
+.ta-compare-against { --fg: var(--bad); }
+.ta-thesis { border:1px solid var(--line); border-left:4px solid var(--accent); border-radius: var(--radius); padding:12px 18px;
+  background: var(--surface); color: var(--ink); margin-bottom:12px; font-family: var(--serif); font-size:1.1rem; line-height:1.5; }
+.ta-thesis .ta-muted { font-family: var(--sans); font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.09em; margin-bottom:3px; }
+
+/* ---- landing sample + how it works */
+.ta-sample { margin-top:18px; border:1px solid var(--line-2); border-radius:14px; background: var(--surface); padding:16px 18px;
+  box-shadow:0 8px 24px rgba(23,32,51,.07); position:relative; }
+.ta-sample-tag { position:absolute; top:-10px; left:16px; background: var(--ink); color:#fff; font-size:0.66rem; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase; padding:2px 9px; border-radius:999px; }
+.ta-sample .s-head { display:flex; justify-content:space-between; align-items:baseline; margin:6px 0 2px; }
+.ta-sample .s-label { font-family: var(--serif); font-size:1.5rem; font-weight:600; color: var(--fg); }
+.ta-sample .s-claim { display:flex; gap:10px; padding:9px 0; border-top:1px solid var(--line); font-size:0.88rem; line-height:1.45; }
+.ta-sample .s-claim .ci { flex:none; width:22px; height:22px; border-radius:50%; background: var(--bg); color: var(--fg);
+  display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; }
+.ta-how { list-style:none; padding:0; margin:0; }
+.ta-how li { position:relative; padding:0 0 14px 42px; color: var(--ink-2); line-height:1.5; }
+.ta-ico { position:absolute; left:0; top:-2px; width:30px; height:30px; border-radius:8px; background: var(--accent-soft); }
+.ta-ico::after { content:""; position:absolute; inset:6px; background: var(--accent);
+  -webkit-mask: var(--ico) center/contain no-repeat; mask: var(--ico) center/contain no-repeat; }
+.ico-claims { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16M4 12h10M4 18h6'/%3E%3C/svg%3E"); }
+.ico-search { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='6'/%3E%3Cpath d='M20 20l-4.5-4.5'/%3E%3C/svg%3E"); }
+.ico-scale  { --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v16M6 20h12M5 8h14'/%3E%3Cpath d='M5 8l-3 6a3 3 0 006 0zM19 8l-3 6a3 3 0 006 0z'/%3E%3C/svg%3E"); }
+.ta-legend { margin-bottom:10px; }
+.ta-legend .ta-pill { margin-bottom:3px; }
+
+/* ---- methodology */
+.ta-flow { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; margin:8px 0 6px; }
+.ta-flow > div { border:1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding:14px 16px; }
+.ta-flow .n { font-family: var(--mono); font-size:0.72rem; color: var(--accent); font-weight:700; letter-spacing:.06em; }
+.ta-flow h4 { font-family: var(--serif); font-size:1.08rem; margin:2px 0 4px; font-weight:600; }
+.ta-flow p { margin:0; color: var(--ink-2); font-size:0.86rem; line-height:1.5; }
+.ta-prose { max-width:46em; color: var(--ink-2); line-height:1.65; }
+.ta-prose b { color: var(--ink); }
+.ta-rule { display:grid; grid-template-columns:150px 1fr; gap:12px; align-items:start; padding:12px 0; border-top:1px solid var(--line); }
+
+.ta-disclaimer { font-size:0.78rem; color: var(--ink-3); border-top:1px solid var(--line); padding-top:12px; margin-top:28px; }
+
+@media (max-width: 820px) {
+  .ta-kpis { grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .ta-steps { flex-direction:column; border-bottom:0; }
+  .ta-step { border-bottom:1px solid var(--line); margin-bottom:0; }
+  .ta-score-side { text-align:left; }
+  .ta-hero-title { font-size:2.1rem; }
+  .ta-rule { grid-template-columns:1fr; }
+  .ta-flow { grid-template-columns:1fr; }
+  [data-testid="stMainBlockContainer"] { padding-left:1rem; padding-right:1rem; }   /* [internal] */
+}

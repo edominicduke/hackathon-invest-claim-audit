@@ -19,13 +19,13 @@ $env:ANTHROPIC_API_KEY="sk-ant-..."                  # PowerShell; bash: export 
 #   Thinking is LOW for every Gemini model by default; lift with $env:GEMINI_MAX_THINKING="MEDIUM" or "HIGH"
 #   Daily quota used up? The app switches to the next model automatically. Choose the order with
 #   $env:GEMINI_FALLBACK_MODELS="model-a,model-b" (default: discovered from your key); off: GEMINI_AUTO_SWITCH=0
-streamlit run app.py                                 # UI
+streamlit run app.py                                 # UI (see "UI design" below)
 python -m agent "I'm buying EXMP because ..."        # CLI -> audit JSON
-pytest                                               # 98 tests, no API calls
+pytest                                               # 119 tests, no API calls
 python -m eval.run_eval [--verdicts]                 # eval against the real model (costs API calls)
 ```
 
-Until the real retriever is connected, the agent searches `data/fixtures/exmp_demo.json`, a **fictional** company (EXMP). The fixture includes a planted prompt-injection chunk to test against. The default provider is Claude (`claude-opus-5-5`, override with `AUDITOR_MODEL`), with server-side refusal fallbacks (`fallbacks="default"`). Set `AUDITOR_PROVIDER=gemini` to use [agent/llm_gemini.py](agent/llm_gemini.py) instead. It defaults to `gemini-3.8-flash` (override with `GEMINI_MODEL`), maps effort to Gemini thinking levels, and treats safety blocks as refusals, with no fallback model. Both adapters implement the same `structured()` method, so the pipeline, prompts and checks are identical. API keys are read only from environment variables; never commit them. The terminal running the app logs every pipeline step, every model call (time, thinking tokens) and every retry. Set `AUDITOR_MAX_WORKERS` to control how many claims are checked in parallel.
+The agent uses the team's code in `../stock-agent/` (see [How the team's code is connected](#how-the-teams-code-is-connected)): real SEC filings, earnings calls and papers for **NVDA, AMD, INTC, TSLA and GOOGL**. The fictional company **EXMP** is served from `data/fixtures/exmp_demo.json` (with a planted prompt-injection chunk to test against). Any other ticker has no documents to search, so its claims come back `unverifiable`. The default provider is Claude (`claude-opus-5-5`, override with `AUDITOR_MODEL`), with server-side refusal fallbacks (`fallbacks="default"`). Set `AUDITOR_PROVIDER=gemini` to use [agent/llm_gemini.py](agent/llm_gemini.py) instead. It defaults to `gemini-3.8-flash` (override with `GEMINI_MODEL`), maps effort to Gemini thinking levels, and treats safety blocks as refusals, with no fallback model. Both adapters implement the same `structured()` method, so the pipeline, prompts and checks are identical. API keys are read only from environment variables; never commit them. The terminal running the app logs every pipeline step, every model call (time, thinking tokens) and every retry. Set `AUDITOR_MAX_WORKERS` to control how many claims are checked in parallel.
 
 ## Pipeline
 
@@ -46,28 +46,51 @@ free text ─► parse ─► user confirms "I read this as: BUY EXMP"
                 ▼
           verdict = plain code over claim statuses ─► plain-language summary ─► glossary
                 ▼
-          Bogdan's number check ─► Abdullah's store
+          Bogdan's number check ─► Guru's independent check of the summary ─► Abdullah's store
 ```
 
 | File | Responsibility |
 |---|---|
 | [agent/schemas.py](agent/schemas.py) | All data contracts. `ThesisAudit` is the team hand-off object |
-| [agent/interfaces.py](agent/interfaces.py) | `Retriever` (Guru), `AuditStore` (Abdullah), `NumberChecker` (Bogdan) |
+| [agent/interfaces.py](agent/interfaces.py) | `Retriever` and `CitationVerifier` (Guru), `AuditStore` (Abdullah), `NumberChecker` (Bogdan) |
+| [agent/integrations.py](agent/integrations.py) | Adapters from those interfaces to the team's `stock-agent/` code |
 | [agent/pipeline.py](agent/pipeline.py) | The agent: orchestration plus code-side enforcement |
 | [agent/prompts.py](agent/prompts.py) | Every prompt (Features #6 and #9) |
 | [agent/verdict.py](agent/verdict.py) | Rule-based 🟢🟡🔴 |
 | [agent/citations.py](agent/citations.py) | Deterministic citation checks |
 | [agent/glossary.py](agent/glossary.py) | Reviewed glossary, matched by code |
-| [agent/stubs.py](agent/stubs.py) | Stand-ins until teammates' parts land |
+| [agent/stubs.py](agent/stubs.py) | Stand-ins: fixture search for EXMP, and fallbacks if `stock-agent/` can't load |
 | [eval/run_eval.py](eval/run_eval.py) | Claim- and verdict-level evaluation |
 
-## Integration contract for teammates
+## How the team's code is connected
 
-- **Guru:** implement `search(query, *, ticker, k) -> list[Chunk]`. Fill in `period` and `section` on every chunk, because the period and scope checks depend on them. Return relevant competitor chunks with `related_tickers=[audited ticker]`; the agent marks them `relation="COMPETITOR"`. In transcript chunks, keep the speaker tags such as `(Analyst)`. The agent decides *what* to search for, including adversarial queries. You decide *how* to find it. The Feature #3 citation check currently lives in `agent/citations.py`, so agree on who owns it.
-- **Abdullah:** implement `save_audit(ThesisAudit)` and `save_answers(audit_id, list[UserAnswer])`. `ThesisAudit` has company (`parsed.ticker`), reason (`raw_input`), verdict, sources and `created_at`. Add the price from Bogdan at save time.
-- **Bogdan:** implement `check(audit, chunks) -> list[str]`, where `chunks` is keyed by label (`"S3"`). Numbers appear in `Evidence.quote` (checkable against `chunks[ev.source].text`) and in prose sentences ending in `[S#]`. `audit.sources` maps each label to its `chunk_id`.
+`build_default_auditor()` loads the adapters in [agent/integrations.py](agent/integrations.py). Each adapter only translates formats; none of them changes how the agent reasons. If one can't load (a missing package, a moved folder), the terminal logs a warning and that part falls back to its stand-in. Set `AUDITOR_TEAM_COMPONENTS=0` to use the stand-ins only.
 
-Then wire them in: `ThesisAuditor(llm=ClaudeLLM(), retriever=..., store=..., number_checker=...)`.
+| Interface | Teammate's code | What the adapter does |
+|---|---|---|
+| `Retriever` | Guru: `src/ingest/search.py` | Searches the audited company's documents, plus 1 chunk from its rivals per search (`AUDITOR_COMPETITOR_K`). Rival chunks are marked `COMPETITOR`. Research papers are left out by default, because they can't confirm company facts and crowd out filings on broad queries. `AUDITOR_INCLUDE_PAPERS=1` lets them back in, marked `RESEARCH`. Tickers outside Guru's index go to the EXMP fixture |
+| `CitationVerifier` | Guru: `src/ingest/verify.py` | Runs once over the finished plain-language summary |
+| `NumberChecker` | Bogdan: `src/checks/number_check.py`, `sec_facts.py` | Every number in a quote, or in a sentence with `[S#]`, must appear in the source(s) it cites, with rounding allowed. Numbers from the investor's own thesis are allowed. With `SEC_USER_AGENT` set, dollar figures are also compared with the company's official SEC (XBRL) numbers; matches are shown as confirmations |
+| `AuditStore` | Abdullah: `src/app/store.py` | Archives the full audit JSON in `data/store/`. It also saves a recommendation and a Challenge My Trade session to `stock-agent/data/`, the folder the results check and the track record read. Investors' answers are added to that session. Fictional demo tickers stay out of the track record |
+| Track record page | Abdullah's storage + Bogdan: `src/checks/results_check.py`, `prices.py` | The app's **Track record** page lists every saved audit and its returns vs the S&P 500 at 1/3/6/12 months. The start price is recorded when the audit is saved (`AUDITOR_RECORD_PRICE=0` to skip). **Check results now** runs Bogdan's results check for every horizon that's due |
+
+**Team decisions:**
+- **Two citation checks with different jobs.** The agent's strict, quote-level checks (verbatim quote, then entailment) run *inside* the pipeline and can change a claim's status. Guru's sentence-level check runs *after*, over the summary the user reads, and is shown as an independent second opinion. It never changes the verdict.
+- **The verdict means strength of evidence, not a buy call.** It is stored as `green` / `yellow` / `red` for the track record, which compares it with the S&P 500 only as a long-run reference.
+
+**Optional settings:**
+- **Hybrid search:** `GOOGLE_CLOUD_PROJECT` (with Guru's Vertex setup) turns on embedding search, plus Vertex re-reading of each summary sentence (`AUDITOR_SUPPORT_CHECK`). Without it, search is keyword-only and the summary check is structural: invented labels, uncited numbers.
+- **Official SEC figures:** on whenever `SEC_USER_AGENT` is set to a team name plus contact email (the SEC requires one), e.g. `$env:SEC_USER_AGENT = "Team1J-StockAgent you@example.com"`. `AUDITOR_SEC_NUMBERS=0` turns it off.
+- **Folders:** `STOCK_AGENT_DIR` and `STOCK_AGENT_DATA_DIR` override the folder locations.
+
+## UI design
+
+Direction: **"Research Note"**, an editorial research report (serif headlines, paper and ink) with a modern fintech's clarity. Light theme only.
+
+- **Tokens live in one place.** Colours, fonts, radius and spacing are CSS variables in [styles/theme.css](styles/theme.css); Streamlit's own widgets are matched in [.streamlit/config.toml](.streamlit/config.toml). Python code refers to tones (`good` / `warn` / `bad` / `neutral`), never hex codes.
+- **Fonts are bundled** in `static/fonts/` (Inter, Newsreader, JetBrains Mono; SIL OFL), so the app looks the same offline.
+- **Evidence colours are not market colours.** The rating is shown as *Evidence strength* (Strong / Mixed / Contradicted), and every status carries an icon and a word, so green never reads as "buy" and meaning never depends on colour alone.
+- **Layered depth.** Scorecard, then reasons, then quotes, then raw sources. The Plain English / Analyst switch adds claim types, checks applied and searches run.
 
 ## Design decisions
 
