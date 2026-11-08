@@ -1,5 +1,20 @@
+<<<<<<< HEAD
 venv/
 __pycache__/
 *.pyc
 *.tmp
 .env
+=======
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+
+# Secrets - API keys live in environment variables, never in files
+.env
+.env.*
+
+# Runtime data written by the app (saved audits / answers, downloaded SEC ticker list)
+**/data/store/
+**/data/company_tickers.json
+>>>>>>> 9d0c018 (Add Ethan's agent: thesis auditor, Challenge My Trade, explanations and UI)
