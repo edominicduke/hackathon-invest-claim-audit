@@ -1,0 +1,5 @@
+Realization of a Quantum Error Detection Code with a Dynamically Reassigned Ancillary Qubit
+
+Authors: Alena S. Kazmina, Artyom M. Polyanskiy, Elena Yu. Egorova, Nikolay N. Abramov, Daria A. Kalacheva, Viktor B. Lubsanov, Aleksey N. Bolgar, Ilya A. Simakov
+
+Abstract: Quantum error correction (QEC) is essential for achieving fault-tolerant quantum computing. While superconducting qubits are among the most promising candidates for scalable QEC, their limited nearest-neighbor connectivity presents significant challenges for implementing a wide range of error correction codes. In this work, we experimentally demonstrate a quantum error detection scheme that employs a dynamically reassigned ancillary qubit on a chain of three linearly connected transmon qubits. We show that this scheme achieves performance comparable to conventional static-ancilla circuits. Additionally, the approach facilitates efficient quantum state preparation, which we demonstrate with tomography of arbitrary logical states. Our results provide a flexible method for implementing QEC codes under connectivity constraints and highlight a promising path toward scalable quantum architectures.

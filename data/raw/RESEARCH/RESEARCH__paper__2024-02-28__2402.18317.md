@@ -1,0 +1,5 @@
+Hybrid optomechanical superconducting qubit system
+
+Authors: Juuso Manninen, Robert H. Blick, Francesco Massel
+
+Abstract: We propose an integrated nonlinear superconducting device based on a nanoelectromechanical shuttle. The system can be described as a qubit coupled to a bosonic mode. The topology of the circuit gives rise to an adjustable qubit/mechanical coupling, allowing the experimenter to tune between linear and quadratic coupling in the mechanical degrees of freedom. Owing to its flexibility and potential scalability, the proposed setup represents an important step towards the implementation of bosonic error correction with mechanical elements in large-scale superconducting circuits. We give preliminary evidence of this possibility by discussing a simple state-swapping protocol that uses this device as a quantum memory element.

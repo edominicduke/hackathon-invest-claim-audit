@@ -1,0 +1,5 @@
+Developments in superconducting erasure qubits for hardware-efficient quantum error correction
+
+Authors: Maria Violaris, Luciana Henaut, James Wills, Gioele Consani, Jamie Friel, Brian Vlastakis
+
+Abstract: Quantum computers are inherently noisy, and a crucial challenge for achieving large-scale, fault-tolerant quantum computing is to implement quantum error correction. A promising direction that has made rapid recent progress is to design hardware that has a specific noise profile, leading to a significantly higher threshold for noise with certain quantum error correcting codes. This Perspective focuses on erasure qubits, which enable hardware-efficient quantum error correction, by concatenating an inner code built-in to the hardware with an outer code. We focus on implementations of dual-rail encoded erasure qubits using superconducting qubits, giving an overview of recent developments in theory and simulation, and hardware demonstrators. We also discuss the differences between implementations; near-term applications using quantum error detection; and the open problems for developing this approach towards early fault-tolerant quantum computers.

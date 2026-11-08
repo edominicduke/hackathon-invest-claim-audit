@@ -1,0 +1,5 @@
+Toward Multi-kW Power Delivery Methodologies for Advanced 3D Heterogeneous Integration
+
+Authors: Peiyi Yue, Hangyu Zhang, Ratul Das, Ramesh Harjani, Sachin S. Sapatnekar
+
+Abstract: The demands of modern applications require the construction of ever more complex integrated systems, with AI applications in particular serving as a significant driver for increased system size, potentially going beyond the trilliontransistor mark. The path to building these systems requires the use of advanced packaging, with heterogeneous integrated 2D and 3D chiplets placed atop a substrate. Such computationally powerful systems require significant power for computation: reliable and robust power delivery is a major challenge in light of high power densities and pin count bottlenecks. This paper overviews approaches to building design methodologies that overcome this problem, through the design of multistage distributed power delivery systems, optimized for performance and reliability, and built to coexist within stringent performance, thermal, and reliability constraints.

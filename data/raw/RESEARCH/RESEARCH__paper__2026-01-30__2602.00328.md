@@ -1,0 +1,5 @@
+Harvest: Opportunistic Peer-to-Peer GPU Caching for LLM Inference
+
+Authors: Nikhil Gopal, Kostis Kaffes
+
+Abstract: Large Language Model (LLM) inference is increasingly constrained by GPU memory capacity rather than compute throughput, driven by growing model sizes and the linear growth of the key-value (KV) cache during autoregressive decoding. Existing approaches mitigate memory pressure by offloading model state and KV tensors to host memory, but incur substantial latency due to limited PCIe bandwidth. We present Harvest, an opportunistic GPU cache management framework that exploits high-bandwidth peer-to-peer GPU interconnects to dynamically place model weights and KV cache in unused GPU memory. Harvest treats peer GPU memory as a transient cache tier, preserving correctness while reducing data movement overhead under dynamic memory availability. We demonstrate significant throughput speedup of more than 2 times by using Harvest to accelerate the retrieval of two widely-used inference components: expert layer weights and KV cache entries.
