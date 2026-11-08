@@ -3,8 +3,10 @@
 * Guru      -> ``Retriever``      (the "R": filings, transcripts, papers, chunked + searchable)
 * Abdullah  -> ``AuditStore``     (saves audits, Challenge My Trade answers, track record)
 * Bogdan    -> ``NumberChecker``  (every number the agent writes must appear in the source)
+* Guru      -> ``CitationVerifier`` (final check of the summary the user reads)
 
-Stand-in implementations live in ``agent.stubs`` so this part runs before theirs land.
+Adapters to their code in ``stock-agent/`` live in ``agent.integrations``; stand-ins in
+``agent.stubs`` are used when that code isn't available.
 """
 
 from __future__ import annotations
@@ -13,7 +15,7 @@ from typing import Optional, Protocol
 
 from pydantic import BaseModel, Field
 
-from .schemas import ThesisAudit, UserAnswer
+from .schemas import SummaryCheck, ThesisAudit, UserAnswer
 
 
 class Chunk(BaseModel):
@@ -54,6 +56,17 @@ class NumberChecker(Protocol):
         """Return human-readable issues, one per number not found in its cited source.
 
         ``chunks`` is keyed by audit label ("S3"). Numbers appear in ``Evidence.quote``
-        and in prose fields as sentences ending in [S#] labels.
+        and in prose fields as sentences ending in [S#] labels. May instead return a
+        ``NumberCheckReport`` (issues plus official-SEC confirmations).
+        """
+        ...
+
+
+class CitationVerifier(Protocol):
+    def verify(self, text: str, sources: dict[str, Chunk]) -> SummaryCheck:
+        """Independent final check of finished prose (Guru's Feature #3 check).
+
+        The agent's own strict checks (verbatim quotes, entailment) run inside the
+        pipeline; this one runs once over the plain-language summary the user reads.
         """
         ...

@@ -3,3 +3,7 @@ pydantic>=2.14
 streamlit>=1.52
 pytest>=8
 google-genai>=3.0.0        # only needed for AUDITOR_PROVIDER=gemini
+numpy>=2.0                 # team search index (stock-agent/)
+rank-bm25==0.2.2           # team keyword search (stock-agent/)
+google-cloud-discoveryengine  # optional: Guru's sentence-level support check (needs Google Cloud)
+yfinance>=0.2.40           # track record: prices for Bogdan's results check

@@ -190,6 +190,35 @@ class SourceRef(BaseModel):
     section: Optional[str] = None
     filed_date: Optional[str] = None
     url: Optional[str] = None
+    text: Optional[str] = None  # the passage itself, so storage and number checks can reuse it
+
+
+class SentenceCheck(BaseModel):
+    """One sentence of the summary, as judged by the independent citation check (Guru's)."""
+
+    sentence: str
+    cited: list[str] = Field(default_factory=list)
+    # supported | partial | unsupported | weak | cited | invalid_citation | uncited_number
+    # | uncited_claim | interpretation | no_claim
+    status: str
+    unsupported_parts: list[str] = Field(default_factory=list)
+    note: Optional[str] = None  # e.g. why the support check couldn't run
+
+
+class NumberCheckReport(BaseModel):
+    """Bogdan's number check, with the optional comparison against official SEC figures."""
+
+    issues: list[str] = Field(default_factory=list)  # numbers not found in their cited source
+    sec_confirmed: list[str] = Field(default_factory=list)  # numbers matching an official SEC figure
+    sec_checked: bool = False
+    sec_error: Optional[str] = None  # why the SEC comparison couldn't run
+
+
+class SummaryCheck(BaseModel):
+    ok: bool
+    support_checked: bool  # False = structural checks only (labels, uncited numbers)
+    counts: dict[str, int] = Field(default_factory=dict)
+    sentences: list[SentenceCheck] = Field(default_factory=list)
 
 
 class UserAnswer(BaseModel):
@@ -217,7 +246,9 @@ class ThesisAudit(BaseModel):
     sources: list[SourceRef] = Field(default_factory=list)  # label -> chunk, cited sources only
     retrieved_chunk_ids: list[str] = Field(default_factory=list)
     number_check_issues: list[str] = Field(default_factory=list)  # filled by Bogdan's checker
+    number_check: Optional[NumberCheckReport] = None  # full report, incl. official SEC matches
     citation_issues: list[str] = Field(default_factory=list)  # inline [S#] problems in prose fields
+    summary_check: Optional[SummaryCheck] = None  # Guru's independent check of the plain summary
     warnings: list[str] = Field(default_factory=list)  # optional steps that failed
     model: str = ""
     disclaimer: str = DISCLAIMER

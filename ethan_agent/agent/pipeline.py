@@ -27,7 +27,7 @@ from typing import Callable, Optional
 from . import prompts as P
 from .citations import check_evidence, check_inline, labels_in, normalize
 from .glossary import audit_text, find_terms
-from .interfaces import AuditStore, Chunk, NumberChecker, Retriever
+from .interfaces import AuditStore, Chunk, CitationVerifier, NumberChecker, Retriever
 from .llm import LLM, LLMError
 from .schemas import (
     AnswerReview,
@@ -42,6 +42,7 @@ from .schemas import (
     Evidence,
     Explanation,
     Materiality,
+    NumberCheckReport,
     ParsedThesis,
     SourceRef,
     ThesisAudit,
@@ -82,14 +83,24 @@ def _label_key(label: str) -> int:
     return int(label[1:]) if label[1:].isdigit() else 0
 
 
+def relation(chunk: Chunk, ticker: str) -> Optional[str]:
+    """RESEARCH for papers (outside authors), COMPETITOR for other companies' documents."""
+    if chunk.doc_type == "paper":
+        return "RESEARCH"
+    if chunk.ticker.upper() != (ticker or "").upper():
+        return "COMPETITOR"
+    return None
+
+
 def format_sources(sources: dict[str, Chunk], ticker: str) -> str:
-    """Wrap chunks in labelled tags. Other companies' chunks are marked COMPETITOR."""
+    """Wrap chunks in labelled tags. Other companies' chunks are marked COMPETITOR,
+    research papers RESEARCH."""
     blocks = []
     for label in sorted(sources, key=_label_key):
         c = sources[label]
         attrs = f'label="{label}" company="{c.ticker}"'
-        if c.ticker.upper() != (ticker or "").upper():
-            attrs += ' relation="COMPETITOR"'
+        if rel := relation(c, ticker):
+            attrs += f' relation="{rel}"'
         attrs += f' doc_type="{c.doc_type}" period="{c.period or "unknown"}"'
         if c.section:
             attrs += f' section="{c.section}"'
@@ -124,6 +135,7 @@ class ThesisAuditor:
         retriever: Retriever,
         store: Optional[AuditStore] = None,
         number_checker: Optional[NumberChecker] = None,
+        citation_verifier: Optional[CitationVerifier] = None,
         *,
         k: int = 4,
         max_follow_ups: int = 2,
@@ -134,6 +146,7 @@ class ThesisAuditor:
         self.retriever = retriever
         self.store = store
         self.number_checker = number_checker
+        self.citation_verifier = citation_verifier
         self.k = k
         self.max_follow_ups = max_follow_ups
         self.max_workers = max_workers
@@ -268,7 +281,8 @@ class ThesisAuditor:
                 continue
             for ei, ev in enumerate(r.evidence):
                 c = pool[ev.source]
-                company = c.ticker + (" (COMPETITOR)" if c.ticker.upper() != ticker.upper() else "")
+                rel = relation(c, ticker)
+                company = c.ticker + (f" ({rel})" if rel else "")
                 items.append(
                     f'<item index="{len(index)}">\nClaim: {r.claim.text}\nCited as: {ev.stance}\n'
                     f"Source: {company} {c.doc_type}, period {c.period or 'unknown'}, "
@@ -453,7 +467,21 @@ class ThesisAuditor:
         )
         audit.glossary = find_terms(re.sub(r"\[S\d+\]", "", audit_text(audit)))
         if self.number_checker:
-            audit.number_check_issues = self.number_checker.check(audit, pool)
+            try:
+                result = self.number_checker.check(audit, pool)
+                if isinstance(result, NumberCheckReport):  # a checker may return the full report
+                    audit.number_check, result = result, result.issues
+                audit.number_check_issues = result
+            except Exception as exc:  # a teammate's check failing must not lose the audit
+                log.warning("Number check failed: %s", exc)
+                audit.warnings.append(f"Number check skipped: {exc}")
+        if self.citation_verifier and explanation:
+            progress("Independent citation check of the summary")
+            try:
+                audit.summary_check = self.citation_verifier.verify(explanation.plain_summary, pool)
+            except Exception as exc:
+                log.warning("Summary citation check failed: %s", exc)
+                audit.warnings.append(f"Independent citation check skipped: {exc}")
         self._save(audit)
         log.info("== Audit done: %s in %.0fs", verdict.level.value, time.perf_counter() - audit_start)
         return audit
@@ -473,4 +501,8 @@ class ThesisAuditor:
 
     def _save(self, audit: ThesisAudit) -> None:
         if self.store:
-            self.store.save_audit(audit)
+            try:
+                self.store.save_audit(audit)
+            except Exception as exc:  # show the result even if saving fails
+                log.warning("Saving the audit failed: %s", exc)
+                audit.warnings.append(f"The audit couldn't be saved: {exc}")

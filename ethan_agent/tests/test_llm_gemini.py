@@ -159,6 +159,7 @@ def test_worker_default_follows_fast_mode(monkeypatch, fast, env, expected):
     monkeypatch.setenv("AUDITOR_PROVIDER", "gemini")
     monkeypatch.setenv("GEMINI_API_KEY", "test-key-not-real")
     monkeypatch.setenv("GEMINI_FAST", fast)
+    monkeypatch.setenv("AUDITOR_TEAM_COMPONENTS", "0")  # don't touch the real track-record folder
     if env:
         monkeypatch.setenv("AUDITOR_MAX_WORKERS", env)
     else:

@@ -19,6 +19,9 @@ sources: "[S1][S3]".
 - If a fact comes from a source marked relation="COMPETITOR", name that company in the \
 sentence. A competitor's statements describe the competitor, not the audited company, \
 and are often promotional.
+- A source marked relation="RESEARCH" is an academic paper about the technology area, \
+written by outside authors. It is never a statement by the company and can't confirm \
+the company's own results; say "research suggests..." when you use it.
 - In transcripts, speaker turns marked (Analyst) are questions or assumptions from \
 outside analysts, not company statements. Never cite them as facts about the company.
 - If the sources don't support a point, say so instead of answering from memory.
